@@ -1,0 +1,25 @@
+# JetBrains IDEs
+.idea/
+*.iml
+
+# macOS
+.DS_Store
+
+# CMake build files
+cmake-build-*/
+build/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+
+# Compiled artifacts
+*.o
+*.a
+*.so
+*.exe
+LraCalculatorCV2
+
+# Other
+*.swp
+*~
