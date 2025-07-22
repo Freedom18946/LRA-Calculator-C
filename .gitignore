@@ -18,7 +18,7 @@ compile_commands.json
 *.a
 *.so
 *.exe
-LraCalculatorCV2
+LRA-Calculator-C
 
 # Other
 *.swp

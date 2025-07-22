@@ -1,4 +1,4 @@
-# LRA Calculator V2 (响度范围计算器)
+# LRA-Calculator-C (响度范围计算器)
 
 这是一个使用 C 语言编写的命令行工具，用于计算媒体文件音轨的响度范围 (Loudness Range, LRA)。项目利用 FFmpeg 库来解码和处理多种格式的媒体文件，并根据 EBU R128 标准分析音频响度。
 
@@ -34,7 +34,7 @@ sudo apt-get install libavformat-dev libavcodec-dev libavutil-dev libswresample-
 1.  **克隆仓库** (如果这是一个 git 仓库)
     ```bash
     # git clone <your-repository-url>
-    # cd LraCalculatorCV2
+    # cd LRA-Calculator-C
     ```
 
 2.  **创建构建目录**
@@ -59,21 +59,21 @@ sudo apt-get install libavformat-dev libavcodec-dev libavutil-dev libswresample-
     ```
 
 5.  **运行程序**
-    可执行文件 `LraCalculatorCV2` 将会生成在 `build` 目录下。
+    可执行文件 `LRA-Calculator-C` 将会生成在 `build` 目录下。
 
     **使用方法:**
     ```bash
-    ./LraCalculatorCV2 <要扫描的媒体文件目录路径>
+    ./LRA-Calculator-C <要扫描的媒体文件目录路径>
     ```
     例如:
     ```bash
-    ./LraCalculatorCV2 /path/to/your/media/files
+    ./LRA-Calculator-C /path/to/your/media/files
     ```
 
 ## 项目结构
 
 ```
-LraCalculatorCV2/
+LRA-Calculator-C/
 ├── CMakeLists.txt          # CMake 构建配置文件
 ├── src/                    # 源代码目录
 │   ├── main.c              # 程序主入口
