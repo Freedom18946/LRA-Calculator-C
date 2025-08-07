@@ -1,25 +1,57 @@
 #include "ffmpeg_processor.h"
 #include <stdio.h>
-#include <errno.h> // For strerror
+#include <errno.h>     // For strerror
+#include <sys/wait.h>  // For WIFEXITED, WEXITSTATUS, WIFSIGNALED, WTERMSIG
 
+/**
+ * 计算指定音频文件的响度范围 (LRA) / Calculate Loudness Range (LRA) for specified audio file
+ *
+ * 此函数使用 FFmpeg 的 ebur128 滤镜来分析音频文件并计算 LRA 值。
+ * This function uses FFmpeg's ebur128 filter to analyze audio files and calculate LRA values.
+ *
+ * @param file_task 包含文件路径信息的结构体指针 / Pointer to structure containing file path information
+ * @param result 用于存储计算结果的结构体指针 / Pointer to structure for storing calculation results
+ */
 void calculate_lra_for_file(const FileToProcess* file_task, ProcessResult* result) {
+    // 参数验证 / Parameter validation
+    if (!file_task || !result) {
+        if (result) {
+            result->success = 0;
+            safe_strncpy(result->error_message, "Invalid parameters passed to calculate_lra_for_file", MAX_LINE_LEN);
+        }
+        return;
+    }
+
     char command[MAX_CMD_LEN];
-    FILE *fp;
+    FILE *fp = NULL;
     char line_buffer[MAX_LINE_LEN];
     int found_lra = 0;
 
+    // 初始化结果结构体 / Initialize result structure
     safe_strncpy(result->relative_path, file_task->relative_path, MAX_PATH_LEN);
     result->lra = NAN;
     result->success = 0;
     result->error_message[0] = '\0';
 
-    snprintf(command, sizeof(command),
-             "ffmpeg -nostdin -i \"%s\" -filter_complex ebur128 -f null -hide_banner -loglevel info - 2>&1",
-             file_task->full_path);
+    // 构建 FFmpeg 命令 / Build FFmpeg command
+    // 使用 ebur128 滤镜进行响度分析 / Use ebur128 filter for loudness analysis
+    int cmd_len = snprintf(command, sizeof(command),
+                          "ffmpeg -nostdin -i \"%s\" -filter_complex ebur128 -f null -hide_banner -loglevel info - 2>&1",
+                          file_task->full_path);
 
+    // 检查命令长度是否超出缓冲区 / Check if command length exceeds buffer
+    if (cmd_len >= (int)sizeof(command)) {
+        snprintf(result->error_message, MAX_LINE_LEN,
+                "FFmpeg command too long for file: %s", file_task->relative_path);
+        return;
+    }
+
+    // 执行 FFmpeg 命令 / Execute FFmpeg command
     fp = popen(command, "r");
     if (fp == NULL) {
-        snprintf(result->error_message, MAX_LINE_LEN, "Failed to run ffmpeg command for %s. Error: %s", file_task->full_path, strerror(errno));
+        snprintf(result->error_message, MAX_LINE_LEN,
+                "Failed to run ffmpeg command for %s. Error: %s",
+                file_task->relative_path, strerror(errno));
         return;
     }
 

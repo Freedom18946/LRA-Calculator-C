@@ -19,8 +19,9 @@ const char *get_filename_ext(const char *filename) {
 }
 
 void string_to_lower(char *str) {
-    for (int i = 0; str[i]; i++) {
-        str[i] = tolower(str[i]);
+    if (!str) return;  // 空指针检查 / Null pointer check
+    for (size_t i = 0; str[i]; i++) {
+        str[i] = (char)tolower((unsigned char)str[i]);
     }
 }
 
@@ -33,7 +34,7 @@ int is_supported_extension(const char *filename) {
     safe_strncpy(ext, ext_const, sizeof(ext));
     string_to_lower(ext);
 
-    for (int i = 0; i < NUM_SUPPORTED_EXTENSIONS; ++i) {
+    for (size_t i = 0; i < NUM_SUPPORTED_EXTENSIONS; ++i) {
         if (strcmp(ext, SUPPORTED_EXTENSIONS[i]) == 0) {
             return 1;
         }
