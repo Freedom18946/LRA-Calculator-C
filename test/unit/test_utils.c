@@ -142,9 +142,9 @@ void test_dynamic_arrays() {
     TEST_ASSERT(files.capacity == 2, "初始容量正确");
     
     // 添加文件 / Add files
-    FileToProcess file1 = {"/path/to/file1.mp3", "file1.mp3"};
-    FileToProcess file2 = {"/path/to/file2.flac", "file2.flac"};
-    FileToProcess file3 = {"/path/to/file3.wav", "file3.wav"};
+    FileToProcess file1 = {"/path/to/file1.mp3", "file1.mp3", 0, 0};
+    FileToProcess file2 = {"/path/to/file2.flac", "file2.flac", 0, 0};
+    FileToProcess file3 = {"/path/to/file3.wav", "file3.wav", 0, 0};
     
     TEST_ASSERT(DynamicArrayFiles_add(&files, &file1) == 1, "添加第一个文件");
     TEST_ASSERT(files.count == 1, "计数更新正确");

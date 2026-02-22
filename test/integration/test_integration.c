@@ -68,7 +68,8 @@ void test_complete_workflow() {
     // 2. 扫描文件 / Scan files
     int scan_result = scan_files_with_nftw("/tmp/lra_integration_test", &files, 
                                           "/tmp/lra_integration_test", 
-                                          "/tmp/lra_integration_test/results.txt");
+                                          "/tmp/lra_integration_test/results.txt",
+                                          NULL);
     TEST_ASSERT(scan_result == 1, "文件扫描成功");
     TEST_ASSERT(files.count == 3, "找到预期数量的文件");
     
@@ -76,7 +77,8 @@ void test_complete_workflow() {
     // Process files (Note: Since these are empty files, FFmpeg processing will fail, which is expected)
     for (size_t i = 0; i < files.count; i++) {
         ProcessResult result;
-        calculate_lra_for_file(&files.items[i], &result);
+        FFmpegExecutionConfig config = {.timeout_seconds = 10, .max_cpu_seconds = 10, .max_memory_mb = 512};
+        calculate_lra_for_file(&files.items[i], &result, &config);
         
         // 空文件处理应该失败 / Empty file processing should fail
         TEST_ASSERT(result.success == 0, "空文件处理失败（预期行为）");
@@ -108,13 +110,14 @@ void test_error_handling() {
     
     // 测试无效参数 / Test invalid parameters
     ProcessResult result;
-    calculate_lra_for_file(NULL, &result);
+    FFmpegExecutionConfig config = {.timeout_seconds = 10, .max_cpu_seconds = 10, .max_memory_mb = 512};
+    calculate_lra_for_file(NULL, &result, &config);
     TEST_ASSERT(result.success == 0, "空指针参数处理");
     TEST_ASSERT(strlen(result.error_message) > 0, "错误消息设置正确");
     
     // 测试不存在的文件 / Test non-existent file
-    FileToProcess fake_file = {"/tmp/nonexistent_file.mp3", "nonexistent_file.mp3"};
-    calculate_lra_for_file(&fake_file, &result);
+    FileToProcess fake_file = {"/tmp/nonexistent_file.mp3", "nonexistent_file.mp3", 0, 0};
+    calculate_lra_for_file(&fake_file, &result, &config);
     TEST_ASSERT(result.success == 0, "不存在文件处理失败");
     TEST_ASSERT(strlen(result.error_message) > 0, "错误消息不为空");
 }

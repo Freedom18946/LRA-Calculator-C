@@ -63,7 +63,7 @@ void test_file_scanning() {
     TEST_ASSERT(DynamicArrayFiles_init(&files, 10) == 1, "文件数组初始化");
     
     // 扫描测试目录 / Scan test directory
-    int result = scan_files_with_nftw("/tmp/lra_test_dir", &files, "/tmp/lra_test_dir", "/tmp/lra_test_dir/results.txt");
+    int result = scan_files_with_nftw("/tmp/lra_test_dir", &files, "/tmp/lra_test_dir", "/tmp/lra_test_dir/results.txt", NULL);
     TEST_ASSERT(result == 1, "文件扫描执行成功");
     
     // 验证扫描结果 / Verify scan results
@@ -98,7 +98,7 @@ void test_empty_directory_scanning() {
     DynamicArrayFiles files;
     TEST_ASSERT(DynamicArrayFiles_init(&files, 10) == 1, "文件数组初始化");
     
-    int result = scan_files_with_nftw("/tmp/lra_empty_test", &files, "/tmp/lra_empty_test", "/tmp/lra_empty_test/results.txt");
+    int result = scan_files_with_nftw("/tmp/lra_empty_test", &files, "/tmp/lra_empty_test", "/tmp/lra_empty_test/results.txt", NULL);
     TEST_ASSERT(result == 1, "空目录扫描执行成功");
     TEST_ASSERT(files.count == 0, "空目录中没有找到文件");
     
@@ -115,10 +115,48 @@ void test_nonexistent_directory() {
     DynamicArrayFiles files;
     TEST_ASSERT(DynamicArrayFiles_init(&files, 10) == 1, "文件数组初始化");
     
-    int result = scan_files_with_nftw("/tmp/nonexistent_directory", &files, "/tmp/nonexistent_directory", "/tmp/results.txt");
+    int result = scan_files_with_nftw("/tmp/nonexistent_directory", &files, "/tmp/nonexistent_directory", "/tmp/results.txt", NULL);
     TEST_ASSERT(result == 0, "不存在目录扫描应该失败");
     
     DynamicArrayFiles_free(&files);
+}
+
+/**
+ * 测试 include/exclude 过滤 / Test include/exclude filters
+ */
+void test_scan_filters() {
+    printf("\n=== 测试 include/exclude 过滤 / Testing include/exclude filters ===\n");
+
+    setup_test_directory();
+
+    DynamicArrayFiles files;
+    TEST_ASSERT(DynamicArrayFiles_init(&files, 10) == 1, "文件数组初始化");
+
+    ScanOptions options = {
+        .include_pattern = "*.mp3",
+        .exclude_pattern = NULL
+    };
+    int result = scan_files_with_nftw("/tmp/lra_test_dir", &files, "/tmp/lra_test_dir",
+                                      "/tmp/lra_test_dir/results.txt", &options);
+    TEST_ASSERT(result == 1, "include 扫描成功");
+    TEST_ASSERT(files.count == 1, "include 只保留一个 mp3 文件");
+    TEST_ASSERT(strstr(files.items[0].relative_path, "test1.mp3") != NULL, "include 结果正确");
+    DynamicArrayFiles_free(&files);
+
+    TEST_ASSERT(DynamicArrayFiles_init(&files, 10) == 1, "文件数组重新初始化");
+    options.include_pattern = NULL;
+    options.exclude_pattern = "*test2.flac";
+    result = scan_files_with_nftw("/tmp/lra_test_dir", &files, "/tmp/lra_test_dir",
+                                  "/tmp/lra_test_dir/results.txt", &options);
+    TEST_ASSERT(result == 1, "exclude 扫描成功");
+    TEST_ASSERT(files.count == 3, "exclude 后剩余三个音频文件");
+    for (size_t i = 0; i < files.count; i++) {
+        TEST_ASSERT(strstr(files.items[i].relative_path, "test2.flac") == NULL,
+                    "exclude 文件不在结果中");
+    }
+
+    DynamicArrayFiles_free(&files);
+    cleanup_test_directory();
 }
 
 /**
@@ -131,6 +169,7 @@ int main() {
     test_file_scanning();
     test_empty_directory_scanning();
     test_nonexistent_directory();
+    test_scan_filters();
     
     printf("\n================================================================\n");
     printf("所有测试通过！/ All tests passed!\n");

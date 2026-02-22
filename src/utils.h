@@ -55,6 +55,8 @@ extern const char *SUPPORTED_EXTENSIONS[NUM_SUPPORTED_EXTENSIONS];
 typedef struct {
     char full_path[MAX_PATH_LEN];     // 文件的完整绝对路径 / Full absolute path of the file
     char relative_path[MAX_PATH_LEN]; // 相对于基础目录的路径 / Path relative to base directory
+    long long file_size_bytes;        // 文件大小 (字节) / File size in bytes
+    time_t modified_time_epoch;       // 修改时间 (epoch) / Modification time (epoch)
 } FileToProcess;
 
 /**

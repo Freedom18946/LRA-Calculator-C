@@ -24,6 +24,7 @@ set(SOURCES
     src/file_scanner.c
     src/ffmpeg_processor.c
     src/result_manager.c
+    src/cache_manager.c
 )
 
 # 创建可执行文件 / Create executable

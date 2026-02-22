@@ -119,7 +119,7 @@ cd /path/to/LRA-Calculator-C/build
 
 程序会提示您输入音频文件目录路径：
 ```
-欢迎使用音频 LRA 计算器 (C语言版 V2.0 - GCD & NFTW)！
+欢迎使用音频 LRA 计算器 (C语言版 V2.1)！
 当前时间: 2025-08-07 10:07:37
 请输入要递归处理的音乐顶层文件夹路径: 
 ```
@@ -131,7 +131,10 @@ cd /path/to/LRA-Calculator-C/build
 
 ### 查看结果 / View Results
 
-程序完成后，结果将保存在指定目录下的 `lra_results.txt` 文件中：
+程序完成后，结果将保存在指定目录下。默认文件名取决于格式：
+- `txt` -> `lra_results.txt`
+- `csv` -> `lra_results.csv`
+- `json` -> `lra_results.json`
 
 ```bash
 # 查看结果文件
@@ -145,6 +148,24 @@ music/song1.mp3 - 8.5
 music/song2.flac - 12.3
 music/song3.wav - 6.7
 ```
+
+## 常用高级参数 / Common Advanced Options
+
+```bash
+# CSV 输出
+./LRA-Calculator-C --format csv /path/to/music
+
+# 只处理 FLAC 并排除 demo 目录
+./LRA-Calculator-C --include \"*.flac\" --exclude \"*/demo/*\" /path/to/music
+
+# 启用缓存恢复（第二次扫描会自动跳过未变化文件）
+./LRA-Calculator-C --resume /path/to/music
+
+# 失败重试 + 超时和内存限制
+./LRA-Calculator-C --retry 2 --ffmpeg-timeout 90 --ffmpeg-max-memory-mb 768 /path/to/music
+```
+
+> 安全说明：输出文件、缓存文件、失败报告路径都限制在扫描目录内部，防止路径逃逸写入。
 
 ## 支持的文件格式 / Supported File Formats
 
@@ -185,6 +206,6 @@ LRA-Calculator-C 支持以下音频格式：
 
 ---
 
-**文档版本 / Document Version**: v1.0  
-**最后更新 / Last Updated**: 2025-08-07  
+**文档版本 / Document Version**: v1.1  
+**最后更新 / Last Updated**: 2026-02-22  
 **相关文档 / Related Documents**: [编译构建指南](./build-guide.md), [使用示例](./usage-examples.md)

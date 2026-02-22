@@ -11,9 +11,10 @@ LRA-Calculator-C is a high-performance audio Loudness Range (LRA) calculation to
 ### 整体设计原则 / Overall Design Principles
 
 1. **模块化设计 (Modular Design)**: 将功能分解为独立的模块，便于维护和扩展
-2. **高性能并发 (High-Performance Concurrency)**: 使用 Grand Central Dispatch (GCD) 实现高效的并行处理
+2. **高性能并发 (High-Performance Concurrency)**: 使用 Grand Central Dispatch (GCD) + 并发限流实现可控并行处理
 3. **跨平台兼容 (Cross-Platform Compatibility)**: 基于标准 C 和 POSIX API，支持多平台编译
 4. **内存安全 (Memory Safety)**: 严格的内存管理和错误处理机制
+5. **执行安全 (Execution Safety)**: FFmpeg 通过 `fork/execvp` 启动，避免 shell 注入风险
 
 ### 系统组件图 / System Components Diagram
 
@@ -32,14 +33,19 @@ LRA-Calculator-C is a high-performance audio Loudness Range (LRA) calculation to
 │  └─ 路径规范化 / Path Normalization                        │
 ├─────────────────────────────────────────────────────────────┤
 │  ffmpeg_processor - FFmpeg 处理模块 / FFmpeg Processor     │
-│  ├─ FFmpeg 命令构建 / FFmpeg Command Building              │
+│  ├─ 安全进程启动 (execvp) / Safe Process Spawn (execvp)    │
+│  ├─ 超时与资源限制 / Timeout and Resource Limits           │
 │  ├─ 进程管道通信 / Process Pipeline Communication          │
 │  └─ LRA 数值解析 / LRA Value Parsing                       │
 ├─────────────────────────────────────────────────────────────┤
 │  result_manager - 结果管理模块 / Result Manager Module      │
 │  ├─ 结果收集 / Result Collection                           │
-│  ├─ 文件输出 / File Output                                 │
+│  ├─ 多格式输出 (TXT/CSV/JSON) / Multi-format Output       │
 │  └─ 数据排序 / Data Sorting                               │
+├─────────────────────────────────────────────────────────────┤
+│  cache_manager - 缓存模块 / Cache Manager Module            │
+│  ├─ 缓存加载/保存 / Cache Load/Save                        │
+│  └─ 未变更文件复用 / Reuse for Unchanged Files             │
 ├─────────────────────────────────────────────────────────────┤
 │  utils - 工具函数模块 / Utility Functions Module           │
 │  ├─ 动态数组管理 / Dynamic Array Management                │
@@ -65,8 +71,9 @@ LRA-Calculator-C is a high-performance audio Loudness Range (LRA) calculation to
 
 3. **并行处理阶段 / Parallel Processing Phase**
    - 创建 GCD 任务队列 / Create GCD task queue
+   - 应用并发上限 (`--jobs`) / Apply concurrency limit (`--jobs`)
    - 为每个文件创建处理任务 / Create processing task for each file
-   - 并发执行 FFmpeg 分析 / Concurrent FFmpeg analysis execution
+   - 并发执行 FFmpeg 分析（支持重试） / Concurrent FFmpeg analysis (with retries)
 
 4. **结果收集阶段 / Result Collection Phase**
    - 线程安全的结果聚合 / Thread-safe result aggregation
@@ -74,8 +81,9 @@ LRA-Calculator-C is a high-performance audio Loudness Range (LRA) calculation to
    - 进度显示更新 / Progress display updates
 
 5. **输出生成阶段 / Output Generation Phase**
-   - 结果文件写入 / Result file writing
-   - 数据排序处理 / Data sorting processing
+   - 内存排序后写出 / In-memory sorting and writing
+   - 可选失败报告 / Optional failure report
+   - 可选缓存更新 / Optional cache update
    - 统计信息汇总 / Statistics summary
 
 ## 并发模型 / Concurrency Model
@@ -103,6 +111,7 @@ LRA-Calculator-C is a high-performance audio Loudness Range (LRA) calculation to
 
 - **共享数据保护**: 使用互斥锁保护共享的结果数组
 - **原子操作**: 使用原子计数器跟踪处理进度
+- **并发限流**: 使用 dispatch semaphore 限制同时执行任务数
 - **任务隔离**: 每个文件处理任务独立运行，避免数据竞争
 - **资源管理**: GCD 自动管理线程生命周期和资源分配
 
@@ -120,10 +129,11 @@ LRA-Calculator-C is a high-performance audio Loudness Range (LRA) calculation to
 ## 性能特性 / Performance Characteristics
 
 ### 优化策略 / Optimization Strategies
-1. **并发处理**: 充分利用多核 CPU 资源
+1. **并发处理**: 充分利用多核 CPU 资源，并支持可控上限
 2. **内存效率**: 动态数组管理，避免内存浪费
 3. **I/O 优化**: 批量文件操作，减少系统调用
-4. **进程复用**: 高效的 FFmpeg 进程管道通信
+4. **安全执行**: 无 shell 命令拼接，降低注入风险
+5. **增量处理**: 缓存未变更文件分析结果
 
 ### 扩展性考虑 / Scalability Considerations
 - 支持大规模文件批处理 / Support large-scale file batch processing
@@ -132,6 +142,6 @@ LRA-Calculator-C is a high-performance audio Loudness Range (LRA) calculation to
 
 ---
 
-**文档版本 / Document Version**: v1.0  
-**最后更新 / Last Updated**: 2025-08-07  
+**文档版本 / Document Version**: v1.1  
+**最后更新 / Last Updated**: 2026-02-22  
 **相关文档 / Related Documents**: [模块设计详解](./module-design.md), [数据流程图解](./data-flow.md)

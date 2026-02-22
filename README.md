@@ -1,7 +1,7 @@
 # LRA-Calculator-C (响度范围计算器)
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/your-repo/LRA-Calculator-C)
-[![Version](https://img.shields.io/badge/version-2.0-blue.svg)](https://github.com/your-repo/LRA-Calculator-C/releases)
+[![Version](https://img.shields.io/badge/version-2.1-blue.svg)](https://github.com/your-repo/LRA-Calculator-C/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey.svg)](https://github.com/your-repo/LRA-Calculator-C)
 
@@ -15,9 +15,13 @@ This is a high-performance command-line tool written in C for calculating the Lo
 - **🎵 多格式支持 / Multi-Format Support**: 支持 WAV, MP3, FLAC, AAC, M4A, OGG, Opus, WMA, AIFF, ALAC 等格式 / Support for WAV, MP3, FLAC, AAC, M4A, OGG, Opus, WMA, AIFF, ALAC and more
 - **⚡ 高性能并发处理 / High-Performance Concurrent Processing**: 使用 Grand Central Dispatch (GCD) 实现多核并行计算 / Uses Grand Central Dispatch (GCD) for multi-core parallel computation
 - **📊 精确 LRA 计算 / Precise LRA Calculation**: 基于 EBU R128 标准的精确响度范围计算 / Precise loudness range calculation based on EBU R128 standard
-- **📁 结果管理 / Result Management**: 自动生成排序后的结果文件 / Automatically generate sorted result files
+- **📁 结果管理 / Result Management**: 自动生成排序后的结果文件，并支持 TXT/CSV/JSON / Generate sorted result files with TXT/CSV/JSON support
 - **🖥️ 跨平台支持 / Cross-Platform Support**: 支持 macOS, Linux, Windows (WSL) / Support for macOS, Linux, Windows (WSL)
 - **🛠️ 灵活配置 / Flexible Configuration**: 支持多种命令行选项和配置模式 / Support for various command-line options and configuration modes
+- **🛡️ 安全执行 / Safer Execution**: 通过 `fork/execvp` 调用 FFmpeg，避免 shell 注入 / Uses `fork/execvp` to avoid shell command injection
+- **♻️ 增量恢复 / Incremental Resume**: 支持缓存未变更文件结果 (`--resume`) / Supports cached reuse for unchanged files (`--resume`)
+- **🎯 路径过滤 / Path Filtering**: 支持 include/exclude glob 过滤 / Supports include/exclude glob filters
+- **🔁 失败重试 / Retry on Failure**: 支持失败重试与失败报告输出 / Supports retries and failure report generation
 
 ## 📋 系统要求 / System Requirements
 
@@ -116,6 +120,15 @@ make -j$(nproc)
 
 # 限制并发数 / Limit concurrency
 ./LRA-Calculator-C -j 4 /path/to/music
+
+# JSON 输出 + 增量缓存
+./LRA-Calculator-C --format json --resume /path/to/music
+
+# 只处理匹配路径并排除某些目录
+./LRA-Calculator-C --include "*album*/*.flac" --exclude "*/demo/*" /path/to/music
+
+# FFmpeg 超时/资源限制 + 失败重试
+./LRA-Calculator-C --ffmpeg-timeout 90 --ffmpeg-max-memory-mb 768 --retry 2 /path/to/music
 ```
 
 #### 查看帮助 / View Help
@@ -135,7 +148,8 @@ LRA-Calculator-C/
 │   ├── 📄 utils.h/c               # 工具函数模块 / Utility functions module
 │   ├── 📄 file_scanner.h/c        # 文件扫描模块 / File scanner module
 │   ├── 📄 ffmpeg_processor.h/c    # FFmpeg 处理模块 / FFmpeg processor module
-│   └── 📄 result_manager.h/c      # 结果管理模块 / Result manager module
+│   ├── 📄 result_manager.h/c      # 结果管理模块 / Result manager module
+│   └── 📄 cache_manager.h/c       # 增量缓存模块 / Incremental cache module
 ├── 📁 docs/                       # 文档目录 / Documentation directory
 │   ├── 📄 README.md               # 文档索引 / Documentation index
 │   ├── 📁 architecture/           # 架构设计文档 / Architecture design docs
@@ -155,7 +169,8 @@ LRA-Calculator-C/
 - **🎯 `main.c`**: 程序入口，负责命令行参数解析、用户交互和模块协调 / Program entry point, handles command-line parsing, user interaction, and module coordination
 - **🔍 `file_scanner`**: 使用 nftw 递归遍历目录，识别支持的音频文件格式 / Uses nftw to recursively traverse directories and identify supported audio file formats
 - **⚙️ `ffmpeg_processor`**: 核心处理模块，调用 FFmpeg 进行音频解码和 LRA 计算 / Core processing module, calls FFmpeg for audio decoding and LRA calculation
-- **📊 `result_manager`**: 收集、排序和输出处理结果到文件 / Collects, sorts, and outputs processing results to files
+- **📊 `result_manager`**: 收集、排序并输出 TXT/CSV/JSON 结果与失败报告 / Collects, sorts, outputs TXT/CSV/JSON results and failure reports
+- **♻️ `cache_manager`**: 维护缓存文件，支持 `--resume` 跳过未变更文件 / Maintains cache for `--resume` unchanged-file skipping
 - **🛠️ `utils`**: 通用工具函数，包括动态数组、字符串处理、内存管理等 / Common utility functions including dynamic arrays, string processing, memory management, etc.
 
 ## 🎵 支持的音频格式 / Supported Audio Formats
@@ -197,8 +212,19 @@ LRA-Calculator-C [选项] [目录路径]
   -i, --interactive       交互模式 (默认) / Interactive mode (default)
   -q, --quiet             安静模式，减少输出 / Quiet mode, reduce output
   --verbose               详细模式，显示调试信息 / Verbose mode, show debug info
-  -o, --output <文件名>    指定输出文件名 / Specify output filename
-  -j, --jobs <数量>        最大并发任务数 / Maximum concurrent tasks
+  -o, --output <path>      指定输出文件 (必须位于扫描目录内)
+  -j, --jobs <数量>        最大并发任务数 (实际生效)
+  --format <txt|csv|json>  结果输出格式
+  --include <glob>         仅处理匹配的相对路径
+  --exclude <glob>         排除匹配的相对路径
+  --resume                 启用缓存恢复，跳过未变更文件
+  --cache <path>           指定缓存文件路径 (必须位于扫描目录内)
+  --retry <N>              失败重试次数
+  --ffmpeg-timeout <sec>   单文件超时秒数
+  --ffmpeg-max-cpu <sec>   单文件 CPU 限制秒数
+  --ffmpeg-max-memory-mb <mb> 单文件 FFmpeg 进程内存上限
+  --failure-report <path>  指定失败报告路径
+  --no-failure-report      不输出失败报告
 ```
 
 ### 环境变量 / Environment Variables
@@ -239,6 +265,8 @@ make run_integration_tests
 ### 测试覆盖 / Test Coverage
 - ✅ 工具函数单元测试 / Utility functions unit tests
 - ✅ 文件扫描模块测试 / File scanner module tests
+- ✅ 结果输出模块测试 (TXT/CSV/JSON + 分隔符路径) / Result manager tests
+- ✅ 缓存模块测试 / Cache manager tests
 - ✅ 内存管理测试 / Memory management tests
 - ✅ 错误处理测试 / Error handling tests
 - ✅ 集成测试 / Integration tests
@@ -337,6 +365,6 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ---
 
-**版本 / Version**: 2.0
+**版本 / Version**: 2.1
 **最后更新 / Last Updated**: 2025-08-07
 **维护者 / Maintainer**: LRA-Calculator-C Development Team

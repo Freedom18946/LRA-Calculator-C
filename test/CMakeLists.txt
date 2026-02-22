@@ -14,6 +14,7 @@ set(MAIN_SOURCES
     ../src/file_scanner.c
     ../src/ffmpeg_processor.c
     ../src/result_manager.c
+    ../src/cache_manager.c
 )
 
 # 包含目录 / Include directories
@@ -36,14 +37,30 @@ add_executable(test_file_scanner
     ../src/utils.c
 )
 
+add_executable(test_result_manager
+    unit/test_result_manager.c
+    ../src/result_manager.c
+    ../src/utils.c
+)
+
+add_executable(test_cache_manager
+    unit/test_cache_manager.c
+    ../src/cache_manager.c
+    ../src/utils.c
+)
+
 # 链接 pthread 库 / Link pthread library
 find_package(Threads REQUIRED)
 target_link_libraries(test_utils PRIVATE Threads::Threads)
 target_link_libraries(test_file_scanner PRIVATE Threads::Threads)
+target_link_libraries(test_result_manager PRIVATE Threads::Threads)
+target_link_libraries(test_cache_manager PRIVATE Threads::Threads)
 
 # 添加测试 / Add tests
 add_test(NAME utils_tests COMMAND test_utils)
 add_test(NAME file_scanner_tests COMMAND test_file_scanner)
+add_test(NAME result_manager_tests COMMAND test_result_manager)
+add_test(NAME cache_manager_tests COMMAND test_cache_manager)
 
 # 集成测试 / Integration Tests
 add_executable(integration_test
@@ -78,13 +95,13 @@ set_tests_properties(utils_tests file_scanner_tests integration_tests
 # 自定义测试目标 / Custom test targets
 add_custom_target(run_tests
     COMMAND ${CMAKE_CTEST_COMMAND} --verbose
-    DEPENDS test_utils test_file_scanner integration_test
+    DEPENDS test_utils test_file_scanner test_result_manager test_cache_manager integration_test
     COMMENT "Running all tests"
 )
 
 add_custom_target(run_unit_tests
-    COMMAND ${CMAKE_CTEST_COMMAND} --verbose -R "utils_tests|file_scanner_tests"
-    DEPENDS test_utils test_file_scanner
+    COMMAND ${CMAKE_CTEST_COMMAND} --verbose -R "utils_tests|file_scanner_tests|result_manager_tests|cache_manager_tests"
+    DEPENDS test_utils test_file_scanner test_result_manager test_cache_manager
     COMMENT "Running unit tests only"
 )
 
